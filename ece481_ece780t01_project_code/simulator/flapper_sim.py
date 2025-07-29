@@ -118,6 +118,8 @@ class FlapperSim:
             # self.y = self.x[0:3] + np.random.normal(np.zeros((3, 1)), self.NOISE_STD_DEV * np.ones((3, 1)))
             self.y = self.x + np.random.normal(np.zeros((9, 1)), self.NOISE_STD_DEV * np.ones((9, 1)))
             self.last_time_get_output = int(round(time.time()*1000))
+        else:
+            print("Warning: get_output_measurement() called too frequently, cannot update output measurement")
         return self.y
     
     # def step(self, x, u):
@@ -126,6 +128,8 @@ class FlapperSim:
         if delta_time_set_input > self.SAMPLING_TIME_INTERVAL:
             self.u = u
             self.last_time_set_input = int(round(time.time()*1000))
+        else:
+            print("Warning: step() called too frequently, skipping update")
         
         # integrate (move the robot)
         dt = delta_time_set_input / 1000.0
