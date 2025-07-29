@@ -8,8 +8,8 @@ class FlapperSim:
     def __init__(self, backend_server_ip=None, robot_pose=None):
         self.ROBOT_H = 0.4 # 40 cm
         self.ROBOT_W = 0.5 # 50 cm
-        self.POS_BOUNDS = [-1.0, 2.0, -2.0, 2.0, self.ROBOT_H, 1.5]
-        self.VEL_BOUNDS = np.array([0.1, 0.1, 0.1])
+        self.POS_BOUNDS = [-1.0, 2.0, -2.0, 2.0, self.ROBOT_H, 1.2]
+        self.VEL_BOUNDS = np.array([0.2, 0.2, 0.2])
         self.NOISE_STD_DEV = 0.005 # 5 mm
         self.SAMPLING_TIME_INTERVAL = 100 # 100 ms
         self.last_time_set_input = int(round(time.time()*1000))
@@ -115,10 +115,12 @@ class FlapperSim:
     def get_output_measurement(self):
         delta_time_get_output = int(round(time.time()*1000)) - self.last_time_get_output
         if delta_time_get_output > self.SAMPLING_TIME_INTERVAL:
-            self.y = self.x[0:3] + np.random.normal(np.zeros((3, 1)), self.NOISE_STD_DEV * np.ones((3, 1)))
+            # self.y = self.x[0:3] + np.random.normal(np.zeros((3, 1)), self.NOISE_STD_DEV * np.ones((3, 1)))
+            self.y = self.x + np.random.normal(np.zeros((9, 1)), self.NOISE_STD_DEV * np.ones((9, 1)))
             self.last_time_get_output = int(round(time.time()*1000))
         return self.y
     
+    # def step(self, x, u):
     def step(self, u):
         delta_time_set_input = int(round(time.time()*1000)) - self.last_time_set_input
         if delta_time_set_input > self.SAMPLING_TIME_INTERVAL:
@@ -153,28 +155,28 @@ class FlapperSim:
             self.x[4] = self.VEL_BOUNDS[1]
             self.x[7] = 0.
         
-        if self.x[5] < -self.VEL_BOUNDS[2]:
-            self.x[5] = -self.VEL_BOUNDS[2]
+        if self.x[5] < -self.VEL_BOUNDS[2] * 2.0:
+            self.x[5] = -self.VEL_BOUNDS[2] * 2.0
             self.x[8] = 0.
-        elif self.x[5] > self.VEL_BOUNDS[2]:
-            self.x[5] = self.VEL_BOUNDS[2]
+        elif self.x[5] > self.VEL_BOUNDS[2] / 2.0:
+            self.x[5] = self.VEL_BOUNDS[2] / 2.0
             self.x[8] = 0.
 
         # position bounds
         if self.x[0] < self.POS_BOUNDS[0]:
-            self.x[3] = 0.01
+            self.x[3] = 0.1
         elif self.x[0] > self.POS_BOUNDS[1]:
-            self.x[3] = -0.01
+            self.x[3] = -0.1
         
         if self.x[1] < self.POS_BOUNDS[2]:
-            self.x[4] = 0.01
+            self.x[4] = 0.1
         elif self.x[1] > self.POS_BOUNDS[3]:
-            self.x[4] = -0.01
+            self.x[4] = -0.1
         
         if self.x[2] < self.POS_BOUNDS[4]:
-            self.x[5] = 0.
+            self.x[5] = 0.01
         elif self.x[2] > self.POS_BOUNDS[5]:
-            self.x[5] = -0.01
+            self.x[5] = -0.1
         
         self.yaw = self.yaw + (-1 * self.yaw) * dt
 
