@@ -12,6 +12,7 @@ class FlapperSim:
         self.VEL_BOUNDS = np.array([0.2, 0.2, 0.2])
         self.NOISE_STD_DEV = 0.005 # 5 mm
         self.SAMPLING_TIME_INTERVAL = 100 # 100 ms
+        self.DT = self.SAMPLING_TIME_INTERVAL / 1000.
         self.last_time_set_input = int(round(time.time()*1000))
         self.last_time_get_output = int(round(time.time()*1000))
 
@@ -118,33 +119,20 @@ class FlapperSim:
             # self.y = self.x[0:3] + np.random.normal(np.zeros((3, 1)), self.NOISE_STD_DEV * np.ones((3, 1)))
             self.y = self.x + np.random.normal(np.zeros((9, 1)), self.NOISE_STD_DEV * np.ones((9, 1)))
             self.last_time_get_output = int(round(time.time()*1000))
-        # else:
-        #     pass
-            # print("Warning: get_output_measurement() called too frequently, cannot update output measurement")
         return self.y
     
-    # def step(self, x, u):
-    def step(self, u):
-        delta_time_set_input = int(round(time.time()*1000)) - self.last_time_set_input
-        if delta_time_set_input > self.SAMPLING_TIME_INTERVAL:
-            self.u = u
-            self.last_time_set_input = int(round(time.time()*1000))
-        # else:
-        #     pass
-            # print("Warning: step() called too frequently, skipping update")
-        
-        # integrate (move the robot)
-        dt = delta_time_set_input / 1000.0
+    def step(self, x, u):
+        self.u = u
 
-        self.x[0] = self.x[0] + self.x[3] * dt
-        self.x[1] = self.x[1] + self.x[4] * dt
-        self.x[2] = self.x[2] + self.x[5] * dt
-        self.x[3] = self.x[3] + self.x[6] * dt
-        self.x[4] = self.x[4] + self.x[7] * dt
-        self.x[5] = self.x[5] + self.x[8] * dt
-        self.x[6] = self.x[6] + self.u[0] * dt
-        self.x[7] = self.x[7] + self.u[1] * dt
-        self.x[8] = self.x[8] + self.u[2] * dt
+        self.x[0] = self.x[0] + self.x[3] * self.DT + self.x[6] * self.DT ** 2 / 2 + self.u[0] * self.DT ** 3 / 6
+        self.x[1] = self.x[1] + self.x[4] * self.DT + self.x[7] * self.DT ** 2 / 2 + self.u[1] * self.DT ** 3 / 6
+        self.x[2] = self.x[2] + self.x[5] * self.DT + self.x[8] * self.DT ** 2 / 2 + self.u[2] * self.DT ** 3 / 6
+        self.x[3] = self.x[3] + self.x[6] * self.DT + self.u[0] * self.DT ** 2 / 2
+        self.x[4] = self.x[4] + self.x[7] * self.DT + self.u[1] * self.DT ** 2 / 2
+        self.x[5] = self.x[5] + self.x[8] * self.DT + self.u[2] * self.DT ** 2 / 2
+        self.x[6] = self.x[6] + self.u[0] * self.DT
+        self.x[7] = self.x[7] + self.u[1] * self.DT
+        self.x[8] = self.x[8] + self.u[2] * self.DT
         
         # velocity, and corresponding acceleration, bounds
         if self.x[3] < -self.VEL_BOUNDS[0]:
@@ -184,7 +172,7 @@ class FlapperSim:
         elif self.x[2] > self.POS_BOUNDS[5]:
             self.x[5] = -0.1
         
-        self.yaw = self.yaw + (-1 * self.yaw) * dt
+        self.yaw = self.yaw + (-1 * self.yaw) * self.DT
 
         # update plot
         self.__update_plot()

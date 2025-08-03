@@ -14,7 +14,7 @@ class Flapper:
 
         # mqtt
         self.MQTT_CLIENT_NAME = "student_client"
-        self.MQTT_BROKER = backend_server_ip#"localhost"
+        self.MQTT_BROKER = backend_server_ip
         self.MQTT_PORT = 1883
         self.MQTT_KEEPALIVE = 60
         self.MQTT_ROBOT_STATE_AND_INPUTS_TOPIC_NAME = "robot_state_and_inputs"
@@ -26,8 +26,11 @@ class Flapper:
         self.mqtt_client.loop_start()
 
         # initialize state, input, output
-        self.x = np.zeros((9, 1)) # state: position, velocity, acceleration
-        self.y = np.zeros((3, 1))
+        self.x = np.zeros((9,)) # state: position, velocity, acceleration
+        self.u = np.zeros((3,))
+        self.y = np.zeros((3,))
+
+        self.VERBOSE = False
 
     def mqtt_on_connect(self, client, userdata, flags, rc):
         print("Connected to the MQTT network with result code " + str(rc))
@@ -37,23 +40,28 @@ class Flapper:
     def mqtt_on_message(self, client, userdata, msg):
         if msg.topic == self.MQTT_ROBOT_POSE_TOPIC_NAME:
             self.robot_pose = json.loads(msg.payload)
-            self.x[0:3] = np.array(self.robot_pose[0:3]).reshape((3, 1))
-        print("[students code, flapper class, on message] self.x", self.x)
+            self.y = np.array(self.robot_pose[0:3]).reshape((3,))
+        if self.VERBOSE:
+            print("[students code, flapper class, on message] self.y", self.y)
     
     def get_output_measurement(self):
-        delta_time_get_output = int(round(time.time()*1000)) - self.last_time_get_output
-        if delta_time_get_output > self.SAMPLING_TIME_INTERVAL:
-            self.y = self.x[0:3]
-            self.last_time_get_output = int(round(time.time()*1000))
-        return self.y
+        while True:
+            delta_time_get_output = int(round(time.time()*1000)) - self.last_time_get_output
+            if delta_time_get_output > self.SAMPLING_TIME_INTERVAL:
+                self.last_time_get_output = int(round(time.time()*1000))
+                print(self.y.shape)
+                return self.y
     
-    def step(self, u):
+    def step(self, x, u):
         delta_time_set_input = int(round(time.time()*1000)) - self.last_time_set_input
         if delta_time_set_input > self.SAMPLING_TIME_INTERVAL:
-            self.u = u
+            self.x = x.reshape((9,))
+            self.u = u.reshape((3,))
             self.last_time_set_input = int(round(time.time()*1000))
 
-            robot_state_and_inputs = self.x.reshape((9,)).tolist() + self.u.tolist()
+            robot_state_and_inputs = self.x.tolist() + self.u.tolist()
+            
             self.mqtt_client.publish(self.MQTT_ROBOT_STATE_AND_INPUTS_TOPIC_NAME, json.dumps(robot_state_and_inputs))
 
-            print("[students code, flapper class, step] robot_state_and_inputs", robot_state_and_inputs)
+            if self.VERBOSE:
+                print("[students code, flapper class, step] robot_state_and_inputs", robot_state_and_inputs)
